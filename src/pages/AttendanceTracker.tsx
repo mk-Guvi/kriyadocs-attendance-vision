@@ -317,7 +317,7 @@ const AttendanceTracker: React.FC = () => {
             </Card>
 
             {/* Current Status */}
-            {recentRecords.length > 0 && (
+            {recentRecords.length > 0 && currentUser.name && (
               <AttendanceStatus
                 profile={currentUser as AttendeeProfile}
                 recentRecord={recentRecords[0]}

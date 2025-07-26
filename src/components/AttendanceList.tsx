@@ -59,7 +59,7 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({ records }) => {
                   <Avatar className="h-12 w-12 border border-border">
                     <AvatarImage src={record.image} alt={record.name} />
                     <AvatarFallback className="bg-muted">
-                      {record.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      {record.name ? record.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                     </AvatarFallback>
                   </Avatar>
                   

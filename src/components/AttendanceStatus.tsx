@@ -55,7 +55,7 @@ export const AttendanceStatus: React.FC<AttendanceStatusProps> = ({
           <Avatar className="h-16 w-16 border-2 border-primary/20">
             <AvatarImage src={recentRecord.image} alt={profile.name} />
             <AvatarFallback className="bg-primary/10 text-primary">
-              {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              {profile.name ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
             </AvatarFallback>
           </Avatar>
           
