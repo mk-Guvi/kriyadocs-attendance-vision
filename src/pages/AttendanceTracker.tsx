@@ -86,7 +86,7 @@ const AttendanceTracker: React.FC = () => {
         let profileData: AttendeeProfile;
 
         if (matchResult.isMatch && matchResult.attendeeId) {
-          // Known user - toggle their status
+          // Known user via face match - toggle their status
           userId = matchResult.attendeeId;
           const existingProfile = getProfile(userId)!;
           entryType = existingProfile.currentStatus === 'OUT' ? 'ENTRY' : 'EXIT';
@@ -106,19 +106,50 @@ const AttendanceTracker: React.FC = () => {
             duration: 3000,
           });
         } else {
-          // New user or no face match - default to entry
-          userId = crypto.randomUUID();
-          entryType = 'ENTRY';
-          
-          profileData = {
-            id: userId,
-            name: currentUser.name || 'Unknown User',
-            email: currentUser.email || 'unknown@example.com',
-            lastImage: imageData,
-            currentStatus: 'IN',
-            lastEntry: new Date(),
-            faceDescriptor
-          };
+          // Check for existing user by email (fallback when face matching fails)
+          const existingProfileByEmail = profiles.find(p => 
+            p.email.toLowerCase() === currentUser.email?.toLowerCase()
+          );
+
+          if (existingProfileByEmail) {
+            // Known user by email - toggle their status
+            userId = existingProfileByEmail.id;
+            entryType = existingProfileByEmail.currentStatus === 'OUT' ? 'ENTRY' : 'EXIT';
+            
+            profileData = {
+              ...existingProfileByEmail,
+              lastImage: imageData,
+              currentStatus: entryType === 'ENTRY' ? 'IN' : 'OUT',
+              ...(entryType === 'ENTRY' ? { lastEntry: new Date() } : { lastExit: new Date() }),
+              faceDescriptor: faceDescriptor || existingProfileByEmail.faceDescriptor
+            };
+
+            toast({
+              title: `${entryType === 'ENTRY' ? 'Welcome back' : 'Goodbye'}, ${existingProfileByEmail.name}!`,
+              description: `Recognized by email. ${entryType === 'ENTRY' ? 'Checking in' : 'Checking out'}.`,
+              duration: 3000,
+            });
+          } else {
+            // New user - default to entry
+            userId = crypto.randomUUID();
+            entryType = 'ENTRY';
+            
+            profileData = {
+              id: userId,
+              name: currentUser.name || 'Unknown User',
+              email: currentUser.email || 'unknown@example.com',
+              lastImage: imageData,
+              currentStatus: 'IN',
+              lastEntry: new Date(),
+              faceDescriptor
+            };
+
+            toast({
+              title: "Welcome!",
+              description: `New attendee ${profileData.name} checked in.`,
+              duration: 3000,
+            });
+          }
 
           if (faceDetectionLoaded && !faceDescriptor) {
             toast({
@@ -177,6 +208,7 @@ const AttendanceTracker: React.FC = () => {
     }
   }, [
     currentUser,
+    profiles,
     faceDetectionLoaded,
     detectFaceFromImage,
     findMatchingFace,
