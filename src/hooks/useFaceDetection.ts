@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import * as faceapi from 'face-api.js';
-import { FaceDetectionResult } from '@/types/attendance';
+import { ImageMatchResult } from '@/types/attendance';
 
 export const useFaceDetection = () => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -63,7 +63,7 @@ export const useFaceDetection = () => {
   }, []);
 
   const findMatchingFace = useCallback(
-    (newDescriptor: Float32Array, existingDescriptors: { id: string; descriptor: Float32Array }[]): FaceDetectionResult => {
+    (newDescriptor: Float32Array, existingDescriptors: { id: string; descriptor: Float32Array }[]): ImageMatchResult => {
       if (!newDescriptor || !isLoaded) {
         return { isMatch: false, confidence: 0 };
       }

@@ -20,6 +20,7 @@ export const useAttendanceStore = () => {
         const parsedRecords = JSON.parse(savedRecords).map((record: any) => ({
           ...record,
           timestamp: new Date(record.timestamp),
+          imageFeatures: record.imageFeatures ? new Float32Array(record.imageFeatures) : undefined,
           faceDescriptor: record.faceDescriptor ? new Float32Array(record.faceDescriptor) : undefined
         }));
         setRecords(parsedRecords);
@@ -30,6 +31,7 @@ export const useAttendanceStore = () => {
           ...profile,
           lastEntry: profile.lastEntry ? new Date(profile.lastEntry) : undefined,
           lastExit: profile.lastExit ? new Date(profile.lastExit) : undefined,
+          imageFeatures: profile.imageFeatures ? new Float32Array(profile.imageFeatures) : undefined,
           faceDescriptor: profile.faceDescriptor ? new Float32Array(profile.faceDescriptor) : undefined
         }));
         setProfiles(parsedProfiles);
@@ -44,6 +46,7 @@ export const useAttendanceStore = () => {
     try {
       const serializedRecords = newRecords.map(record => ({
         ...record,
+        imageFeatures: record.imageFeatures ? Array.from(record.imageFeatures) : undefined,
         faceDescriptor: record.faceDescriptor ? Array.from(record.faceDescriptor) : undefined
       }));
       localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(serializedRecords));
@@ -57,6 +60,7 @@ export const useAttendanceStore = () => {
     try {
       const serializedProfiles = newProfiles.map(profile => ({
         ...profile,
+        imageFeatures: profile.imageFeatures ? Array.from(profile.imageFeatures) : undefined,
         faceDescriptor: profile.faceDescriptor ? Array.from(profile.faceDescriptor) : undefined
       }));
       localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(serializedProfiles));
@@ -115,13 +119,13 @@ export const useAttendanceStore = () => {
     return records.slice(0, limit);
   }, [records]);
 
-  // Get all face descriptors for matching
-  const getFaceDescriptors = useCallback(() => {
+  // Get all image features for matching
+  const getImageFeatures = useCallback(() => {
     return profiles
-      .filter(p => p.faceDescriptor)
+      .filter(p => p.imageFeatures)
       .map(p => ({
         id: p.id,
-        descriptor: p.faceDescriptor!
+        features: p.imageFeatures!
       }));
   }, [profiles]);
 
@@ -140,7 +144,8 @@ export const useAttendanceStore = () => {
     updateProfile,
     getProfile,
     getRecentRecords,
-    getFaceDescriptors,
+    getImageFeatures,
+    getFaceDescriptors: getImageFeatures, // Keep for backwards compatibility
     clearAllData
   };
 };

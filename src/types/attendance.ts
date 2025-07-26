@@ -5,7 +5,8 @@ export interface AttendanceRecord {
   image: string; // Base64 encoded image
   timestamp: Date;
   type: 'ENTRY' | 'EXIT';
-  faceDescriptor?: Float32Array; // For face matching
+  imageFeatures?: Float32Array; // For image matching
+  faceDescriptor?: Float32Array; // For face matching (legacy)
 }
 
 export interface AttendeeProfile {
@@ -13,7 +14,8 @@ export interface AttendeeProfile {
   name: string;
   email: string;
   lastImage: string;
-  faceDescriptor?: Float32Array;
+  imageFeatures?: Float32Array; // For image matching
+  faceDescriptor?: Float32Array; // For face matching (legacy)
   currentStatus: 'IN' | 'OUT';
   lastEntry?: Date;
   lastExit?: Date;
@@ -26,7 +28,7 @@ export interface CameraState {
   stream: MediaStream | null;
 }
 
-export interface FaceDetectionResult {
+export interface ImageMatchResult {
   isMatch: boolean;
   confidence: number;
   attendeeId?: string;

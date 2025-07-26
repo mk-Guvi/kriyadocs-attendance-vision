@@ -21,6 +21,7 @@ import { AttendanceList } from '@/components/AttendanceList';
 
 import { useAttendanceStore } from '@/hooks/useAttendanceStore';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
+import { useImageMatching } from '@/hooks/useImageMatching';
 import { AttendeeProfile } from '@/types/attendance';
 
 type Step = 'form' | 'capture' | 'processing' | 'complete';
@@ -40,11 +41,18 @@ const AttendanceTracker: React.FC = () => {
     updateProfile,
     getProfile,
     getRecentRecords,
-    getFaceDescriptors,
+    getImageFeatures,
     clearAllData
   } = useAttendanceStore();
 
   const { isLoaded: faceDetectionLoaded, detectFaceFromImage, findMatchingFace } = useFaceDetection();
+  const { 
+    isLoaded: imageMatchingLoaded, 
+    isLoading: imageMatchingLoading,
+    extractImageFeatures, 
+    findMatchingImage,
+    simpleImageCompare 
+  } = useImageMatching();
 
   const recentRecords = getRecentRecords(20);
   const currentlyPresent = profiles.filter(p => p.currentStatus === 'IN').length;
@@ -59,24 +67,90 @@ const AttendanceTracker: React.FC = () => {
     setStep('processing');
 
     try {
-      // Create image element for face detection
+      // Create image element for processing
       const img = new Image();
       img.onload = async () => {
         let faceDescriptor: Float32Array | null = null;
-        let matchResult = { isMatch: false, confidence: 0, attendeeId: undefined };
+        let imageFeatures: Float32Array | null = null;
+        let matchResult: { isMatch: boolean; confidence: number; attendeeId: string | undefined } = { 
+          isMatch: false, 
+          confidence: 0, 
+          attendeeId: undefined 
+        };
 
-        // Try face detection if available
+        console.log('Processing image for matching...');
+
+        // Try face detection first (if available)
         if (faceDetectionLoaded) {
+          console.log('Attempting face detection...');
           faceDescriptor = await detectFaceFromImage(img);
           
           if (faceDescriptor) {
-            const existingDescriptors = getFaceDescriptors();
-            const result = findMatchingFace(faceDescriptor, existingDescriptors);
+            console.log('Face detected, attempting face matching...');
+            // Legacy face matching - kept for compatibility but not used primarily
+            const existingDescriptors = profiles
+              .filter(p => p.faceDescriptor)
+              .map(p => ({ id: p.id, descriptor: p.faceDescriptor! }));
+            
+            if (existingDescriptors.length > 0) {
+              const result = findMatchingFace(faceDescriptor, existingDescriptors);
+              if (result.isMatch) {
+                matchResult = {
+                  isMatch: result.isMatch,
+                  confidence: result.confidence,
+                  attendeeId: result.attendeeId
+                };
+                console.log('Face match found:', matchResult);
+              }
+            }
+          }
+        }
+
+        // Try image feature extraction and matching (primary method)
+        if (!matchResult.isMatch) {
+          console.log('Attempting image feature extraction...');
+          if (imageMatchingLoaded) {
+            imageFeatures = await extractImageFeatures(imageData);
+            
+            if (imageFeatures) {
+              console.log('Image features extracted, attempting image matching...');
+              const existingImages = getImageFeatures();
+              const imageMatchResult = findMatchingImage(imageFeatures, existingImages);
+              
+              if (imageMatchResult.isMatch) {
+                matchResult = {
+                  isMatch: imageMatchResult.isMatch,
+                  confidence: imageMatchResult.confidence,
+                  attendeeId: imageMatchResult.attendeeId
+                };
+                console.log('Image match found:', matchResult);
+              }
+            }
+          }
+        }
+
+        // Fallback: Simple image comparison for existing profiles
+        if (!matchResult.isMatch && profiles.length > 0) {
+          console.log('Trying simple image comparison fallback...');
+          let bestSimpleMatch = { id: '', confidence: 0 };
+          
+          for (const profile of profiles) {
+            if (profile.lastImage) {
+              const similarity = await simpleImageCompare(imageData, profile.lastImage);
+              if (similarity > bestSimpleMatch.confidence) {
+                bestSimpleMatch = { id: profile.id, confidence: similarity };
+              }
+            }
+          }
+          
+          const simpleThreshold = 0.8; // High threshold for simple comparison
+          if (bestSimpleMatch.confidence > simpleThreshold) {
             matchResult = {
-              isMatch: result.isMatch,
-              confidence: result.confidence,
-              attendeeId: result.attendeeId
+              isMatch: true,
+              confidence: bestSimpleMatch.confidence,
+              attendeeId: bestSimpleMatch.id
             };
+            console.log('Simple image match found:', matchResult);
           }
         }
 
@@ -96,13 +170,15 @@ const AttendanceTracker: React.FC = () => {
             lastImage: imageData,
             currentStatus: entryType === 'ENTRY' ? 'IN' : 'OUT',
             ...(entryType === 'ENTRY' ? { lastEntry: new Date() } : { lastExit: new Date() }),
+            imageFeatures: imageFeatures || existingProfile.imageFeatures,
             faceDescriptor: faceDescriptor || existingProfile.faceDescriptor
           };
 
           // Show match confidence
+          const matchType = imageFeatures ? 'Image' : faceDescriptor ? 'Face' : 'Simple';
           toast({
             title: `Welcome back, ${existingProfile.name}!`,
-            description: `Face match confidence: ${(matchResult.confidence * 100).toFixed(1)}%`,
+            description: `${matchType} match confidence: ${(matchResult.confidence * 100).toFixed(1)}%`,
             duration: 3000,
           });
         } else {
@@ -121,6 +197,7 @@ const AttendanceTracker: React.FC = () => {
               lastImage: imageData,
               currentStatus: entryType === 'ENTRY' ? 'IN' : 'OUT',
               ...(entryType === 'ENTRY' ? { lastEntry: new Date() } : { lastExit: new Date() }),
+              imageFeatures: imageFeatures || existingProfileByEmail.imageFeatures,
               faceDescriptor: faceDescriptor || existingProfileByEmail.faceDescriptor
             };
 
@@ -141,6 +218,7 @@ const AttendanceTracker: React.FC = () => {
               lastImage: imageData,
               currentStatus: 'IN',
               lastEntry: new Date(),
+              imageFeatures,
               faceDescriptor
             };
 
@@ -151,10 +229,16 @@ const AttendanceTracker: React.FC = () => {
             });
           }
 
-          if (faceDetectionLoaded && !faceDescriptor) {
+          if (!imageMatchingLoaded && !faceDetectionLoaded) {
             toast({
-              title: "No face detected",
-              description: "Attendance recorded without face recognition",
+              title: "Limited functionality",
+              description: "Image matching unavailable - using email fallback only",
+              variant: "default",
+            });
+          } else if (imageMatchingLoaded && !imageFeatures && !faceDescriptor) {
+            toast({
+              title: "No features detected",
+              description: "Attendance recorded without biometric matching",
               variant: "default",
             });
           }
@@ -166,6 +250,7 @@ const AttendanceTracker: React.FC = () => {
           email: profileData.email,
           image: imageData,
           type: entryType,
+          imageFeatures,
           faceDescriptor
         });
 
@@ -210,9 +295,13 @@ const AttendanceTracker: React.FC = () => {
     currentUser,
     profiles,
     faceDetectionLoaded,
+    imageMatchingLoaded,
     detectFaceFromImage,
     findMatchingFace,
-    getFaceDescriptors,
+    extractImageFeatures,
+    findMatchingImage,
+    simpleImageCompare,
+    getImageFeatures,
     getProfile,
     addRecord,
     updateProfile,
@@ -260,15 +349,15 @@ const AttendanceTracker: React.FC = () => {
                 </div>
               </div>
               
-              {!faceDetectionLoaded && (
+              {!faceDetectionLoaded && !imageMatchingLoaded && (
                 <Badge variant="outline" className="border-warning text-warning">
-                  Face Detection Loading
+                  Image Matching Loading
                 </Badge>
               )}
               
-              {faceDetectionLoaded && (
+              {(faceDetectionLoaded || imageMatchingLoaded) && (
                 <Badge variant="default" className="bg-success text-success-foreground">
-                  Face Detection Ready
+                  {imageMatchingLoaded ? 'AI Image Matching Ready' : 'Face Detection Ready'}
                 </Badge>
               )}
             </div>
@@ -328,7 +417,9 @@ const AttendanceTracker: React.FC = () => {
                     <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
                     <h3 className="text-lg font-semibold mb-2">Processing Attendance</h3>
                     <p className="text-muted-foreground">
-                      {faceDetectionLoaded ? 'Analyzing face and matching records...' : 'Recording attendance...'}
+                      {imageMatchingLoaded ? 'Analyzing image features and matching records...' : 
+                       faceDetectionLoaded ? 'Analyzing face and matching records...' : 
+                       'Recording attendance...'}
                     </p>
                   </div>
                 )}
