@@ -174,8 +174,8 @@ const AttendanceTracker: React.FC = () => {
               console.log('Same-day image validation - similarity:', similarity);
               if (similarity < 0.7) { // Threshold for same-day image validation
                 toast({
-                  title: "Check-out Failed",
-                  description: "Image does not match today's check-in. Please use the same appearance as when you checked in.",
+                  title: "Invalid Image",
+                  description: "Invalid Image",
                   variant: "destructive",
                 });
                 setStep('capture');
@@ -220,8 +220,8 @@ const AttendanceTracker: React.FC = () => {
                 console.log('Same-day image validation (email match) - similarity:', similarity);
                 if (similarity < 0.7) { // Threshold for same-day image validation
                   toast({
-                    title: "Check-out Failed",
-                    description: "Image does not match today's check-in. Please use the same appearance as when you checked in.",
+                    title: "Invalid Image",
+                    description: "Invalid Image",
                     variant: "destructive",
                   });
                   setStep('capture');
