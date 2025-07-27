@@ -144,7 +144,7 @@ const AttendanceTracker: React.FC = () => {
             }
           }
           
-          const simpleThreshold = 0.8; // High threshold for simple comparison
+          const simpleThreshold = 0.85; // Higher threshold to be more selective
           if (bestSimpleMatch.confidence > simpleThreshold) {
             matchResult = {
               isMatch: true,
@@ -171,6 +171,7 @@ const AttendanceTracker: React.FC = () => {
             const todayEntry = getTodayEntryRecord(userId);
             if (todayEntry) {
               const similarity = await simpleImageCompare(imageData, todayEntry.image);
+              console.log('Same-day image validation - similarity:', similarity);
               if (similarity < 0.7) { // Threshold for same-day image validation
                 toast({
                   title: "Check-out Failed",
@@ -216,6 +217,7 @@ const AttendanceTracker: React.FC = () => {
               const todayEntry = getTodayEntryRecord(userId);
               if (todayEntry) {
                 const similarity = await simpleImageCompare(imageData, todayEntry.image);
+                console.log('Same-day image validation (email match) - similarity:', similarity);
                 if (similarity < 0.7) { // Threshold for same-day image validation
                   toast({
                     title: "Check-out Failed",
