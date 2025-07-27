@@ -41,8 +41,8 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({ records }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[400px]">
-          <div className="p-4 space-y-3">
+        <ScrollArea className="h-[300px] md:h-[400px]">
+          <div className="p-3 md:p-4 space-y-2 md:space-y-3">
             {records.map((record) => {
               const isEntry = record.type === 'ENTRY';
               const icon = isEntry ? LogIn : LogOut;
@@ -51,14 +51,14 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({ records }) => {
                 <div
                   key={record.id}
                   className={cn(
-                    "flex items-center gap-4 p-3 rounded-lg border transition-all",
+                    "flex items-center gap-3 md:gap-4 p-2 md:p-3 rounded-lg border transition-all",
                     "hover:shadow-md",
                     isEntry ? "border-success/20 bg-success/5" : "border-warning/20 bg-warning/5"
                   )}
                 >
-                  <Avatar className="h-12 w-12 border border-border">
+                  <Avatar className="h-10 w-10 md:h-12 md:w-12 border border-border flex-shrink-0">
                     <AvatarImage src={record.image} alt={record.name} />
-                    <AvatarFallback className="bg-muted">
+                    <AvatarFallback className="bg-muted text-xs md:text-sm">
                       {record.name ? record.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -67,17 +67,22 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({ records }) => {
                     <div className="flex items-center gap-2 mb-1">
                       {React.createElement(icon, { 
                         className: cn(
-                          "h-4 w-4 flex-shrink-0", 
+                          "h-3 w-3 md:h-4 md:w-4 flex-shrink-0", 
                           isEntry ? "text-success" : "text-warning"
                         ) 
                       })}
-                      <h4 className="font-medium truncate">{record.name}</h4>
+                      <h4 className="font-medium truncate text-sm md:text-base">{record.name}</h4>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{record.email}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground truncate">{record.email}</p>
                     <div className="flex items-center gap-1 mt-1">
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
-                        {record.timestamp.toLocaleString()}
+                        {record.timestamp.toLocaleString(undefined, { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
                       </span>
                     </div>
                   </div>
@@ -85,7 +90,7 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({ records }) => {
                   <Badge 
                     variant={isEntry ? "default" : "outline"}
                     className={cn(
-                      "flex-shrink-0",
+                      "flex-shrink-0 text-xs px-2 py-1",
                       isEntry && "bg-success text-success-foreground",
                       !isEntry && "border-warning text-warning"
                     )}
