@@ -144,7 +144,7 @@ const AttendanceTracker: React.FC = () => {
             }
           }
           
-          const simpleThreshold = 0.85; // Higher threshold to be more selective
+          const simpleThreshold = 0.8; // High threshold for simple comparison
           if (bestSimpleMatch.confidence > simpleThreshold) {
             matchResult = {
               isMatch: true,
@@ -171,7 +171,6 @@ const AttendanceTracker: React.FC = () => {
             const todayEntry = getTodayEntryRecord(userId);
             if (todayEntry) {
               const similarity = await simpleImageCompare(imageData, todayEntry.image);
-              console.log('Same-day image validation - similarity:', similarity);
               if (similarity < 0.7) { // Threshold for same-day image validation
                 toast({
                   title: "Check-out Failed",
@@ -217,7 +216,6 @@ const AttendanceTracker: React.FC = () => {
               const todayEntry = getTodayEntryRecord(userId);
               if (todayEntry) {
                 const similarity = await simpleImageCompare(imageData, todayEntry.image);
-                console.log('Same-day image validation (email match) - similarity:', similarity);
                 if (similarity < 0.7) { // Threshold for same-day image validation
                   toast({
                     title: "Check-out Failed",
@@ -366,51 +364,62 @@ const AttendanceTracker: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 md:py-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 Smart Attendance Tracker
               </h1>
-              <p className="text-muted-foreground mt-1 text-sm md:text-base">
+              <p className="text-muted-foreground mt-1">
                 AI-powered attendance system with face recognition
               </p>
             </div>
             
-            <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-              <div className="text-left sm:text-right">
+            <div className="flex items-center gap-4">
+              <div className="text-right">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-sm md:text-base">{currentlyPresent} Present</span>
+                  <span className="font-semibold">{currentlyPresent} Present</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <TrendingUp className="h-3 w-3" />
                   <span>{records.length} Total Records</span>
                 </div>
               </div>
+              
+              {!faceDetectionLoaded && !imageMatchingLoaded && (
+                <Badge variant="outline" className="border-warning text-warning">
+                  Image Matching Loading
+                </Badge>
+              )}
+              
+              {(faceDetectionLoaded || imageMatchingLoaded) && (
+                <Badge variant="default" className="bg-success text-success-foreground">
+                  {imageMatchingLoaded ? 'AI Image Matching Ready' : 'Face Detection Ready'}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-4 md:py-8">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Main Attendance Flow */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-6">
             <Card className="border-2 border-primary/20">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <span className="text-lg md:text-xl">Attendance Check-in/out</span>
-                  <div className="flex gap-2 w-full sm:w-auto">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Attendance Check-in/out</span>
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={resetFlow}
                       disabled={isProcessing}
-                      className="flex-1 sm:flex-none"
                     >
                       <RefreshCw className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Reset</span>
+                      Reset
                     </Button>
                     {records.length > 0 && (
                       <Button
@@ -418,10 +427,9 @@ const AttendanceTracker: React.FC = () => {
                         size="sm"
                         onClick={handleClearData}
                         disabled={isProcessing}
-                        className="flex-1 sm:flex-none"
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Clear All</span>
+                        Clear All
                       </Button>
                     )}
                   </div>
