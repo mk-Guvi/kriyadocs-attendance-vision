@@ -42,6 +42,7 @@ const AttendanceTracker: React.FC = () => {
     getProfile,
     getRecentRecords,
     getImageFeatures,
+    getTodayEntryRecord,
     clearAllData
   } = useAttendanceStore();
 
@@ -160,10 +161,28 @@ const AttendanceTracker: React.FC = () => {
         let profileData: AttendeeProfile;
 
         if (matchResult.isMatch && matchResult.attendeeId) {
-          // Known user via face match - toggle their status
+          // Known user via face match - check for same-day validation
           userId = matchResult.attendeeId;
           const existingProfile = getProfile(userId)!;
           entryType = existingProfile.currentStatus === 'OUT' ? 'ENTRY' : 'EXIT';
+          
+          // If trying to EXIT, validate image matches today's ENTRY
+          if (entryType === 'EXIT') {
+            const todayEntry = getTodayEntryRecord(userId);
+            if (todayEntry) {
+              const similarity = await simpleImageCompare(imageData, todayEntry.image);
+              if (similarity < 0.7) { // Threshold for same-day image validation
+                toast({
+                  title: "Check-out Failed",
+                  description: "Image does not match today's check-in. Please use the same appearance as when you checked in.",
+                  variant: "destructive",
+                });
+                setStep('capture');
+                setIsProcessing(false);
+                return;
+              }
+            }
+          }
           
           profileData = {
             ...existingProfile,
@@ -188,9 +207,27 @@ const AttendanceTracker: React.FC = () => {
           );
 
           if (existingProfileByEmail) {
-            // Known user by email - toggle their status
+            // Known user by email - check for same-day validation
             userId = existingProfileByEmail.id;
             entryType = existingProfileByEmail.currentStatus === 'OUT' ? 'ENTRY' : 'EXIT';
+            
+            // If trying to EXIT, validate image matches today's ENTRY
+            if (entryType === 'EXIT') {
+              const todayEntry = getTodayEntryRecord(userId);
+              if (todayEntry) {
+                const similarity = await simpleImageCompare(imageData, todayEntry.image);
+                if (similarity < 0.7) { // Threshold for same-day image validation
+                  toast({
+                    title: "Check-out Failed",
+                    description: "Image does not match today's check-in. Please use the same appearance as when you checked in.",
+                    variant: "destructive",
+                  });
+                  setStep('capture');
+                  setIsProcessing(false);
+                  return;
+                }
+              }
+            }
             
             profileData = {
               ...existingProfileByEmail,
@@ -303,6 +340,7 @@ const AttendanceTracker: React.FC = () => {
     simpleImageCompare,
     getImageFeatures,
     getProfile,
+    getTodayEntryRecord,
     addRecord,
     updateProfile,
     toast

@@ -129,6 +129,21 @@ export const useAttendanceStore = () => {
       }));
   }, [profiles]);
 
+  // Check if user has an entry record for today
+  const getTodayEntryRecord = useCallback((userId: string): AttendanceRecord | undefined => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return records.find(record => 
+      record.email === getProfile(userId)?.email &&
+      record.type === 'ENTRY' &&
+      record.timestamp >= today &&
+      record.timestamp < tomorrow
+    );
+  }, [records, getProfile]);
+
   // Clear all data
   const clearAllData = useCallback(() => {
     setRecords([]);
@@ -146,6 +161,7 @@ export const useAttendanceStore = () => {
     getRecentRecords,
     getImageFeatures,
     getFaceDescriptors: getImageFeatures, // Keep for backwards compatibility
+    getTodayEntryRecord,
     clearAllData
   };
 };
